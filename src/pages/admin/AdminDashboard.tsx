@@ -180,7 +180,8 @@ const AdminDashboard = () => {
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className="text-sm font-bold text-primary">{load.price} {t('sar')}</p>
+                      {/* تم تصحيح الخطأ هنا: تم استبدال </p> بـ </span> */}
+                      <span className="text-sm font-bold text-primary">{load.price} {t('sar')}</span>
                     </div>
                   </div>
                 )) : (
