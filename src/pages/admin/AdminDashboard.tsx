@@ -100,8 +100,8 @@ const AdminDashboard = () => {
               <ArrowLeft className="w-5 h-5 text-foreground" />
             </button>
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center">
-                <Truck className="w-5 h-5 text-primary-foreground" />
+              <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center p-1.5 border border-primary/20">
+                <img src="/logo.png" alt="SAS" className="w-full h-full object-contain" />
               </div>
               <div>
                 <h1 className="text-xl font-bold text-foreground">{t('dashboard')}</h1>
@@ -180,6 +180,7 @@ const AdminDashboard = () => {
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
+                      {/* تم تصحيح الخطأ هنا: تم استبدال </p> بـ </span> */}
                       <span className="text-sm font-bold text-primary">{load.price} {t('sar')}</span>
                     </div>
                   </div>

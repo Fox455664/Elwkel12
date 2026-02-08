@@ -50,11 +50,16 @@ const ShipperTrucks = () => {
           <button onClick={() => navigate('/')} className="icon-btn w-10 h-10">
             <ArrowLeft className="w-5 h-5 text-foreground" />
           </button>
-          <div>
-            <h1 className="text-xl font-bold text-foreground">{t('available_trucks')}</h1>
-            <p className="text-sm text-muted-foreground">
-              {loading ? t('loading') : `${filteredDrivers.length} ${t('driver_available')}`}
-            </p>
+          <div className="flex items-center gap-3">
+             <div className="w-12 h-12 bg-primary/10 rounded-full p-1.5 border border-primary/20">
+                <img src="/logo.png" alt="SAS" className="w-full h-full object-contain" />
+             </div>
+             <div>
+                <h1 className="text-xl font-bold text-foreground">{t('available_trucks')}</h1>
+                <p className="text-sm text-muted-foreground">
+                  {loading ? t('loading') : `${filteredDrivers.length} ${t('driver_available')}`}
+                </p>
+             </div>
           </div>
         </div>
 

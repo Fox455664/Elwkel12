@@ -11,11 +11,11 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { toast } from 'sonner';
-import { useTranslation } from 'react-i18next'; // استيراد
+import { useTranslation } from 'react-i18next';
 
 const LoginPage = () => {
   const navigate = useNavigate();
-  const { t } = useTranslation(); // تفعيل الترجمة
+  const { t } = useTranslation();
   const { setPhoneNumber, setCurrentRole, setCountryCode, countryCode, phoneNumber, setPhoneVerified, setUserProfile } = useAppStore();
   
   const [step, setStep] = useState<'phone' | 'otp'>('phone');
@@ -72,9 +72,12 @@ const LoginPage = () => {
     <div className="min-h-screen bg-background flex flex-col justify-center px-6">
       <div className="text-center mb-8">
         <div className="flex justify-center mb-4">
-          <img src="/logo.png" alt="SAS" className="h-24 w-auto object-contain" />
+          {/* هنا تم إضافة الشعار */}
+          <div className="w-28 h-28 flex items-center justify-center">
+             <img src="/logo.png" alt="SAS" className="w-full h-full object-contain" />
+          </div>
         </div>
-        <h1 className="text-3xl font-bold">SAS</h1>
+        <h1 className="text-3xl font-bold text-primary">SAS</h1>
       </div>
 
       <div className="brand-card p-6">

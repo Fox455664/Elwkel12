@@ -51,8 +51,8 @@ const SplashScreen = () => {
     <div className="mobile-container flex flex-col items-center justify-center min-h-screen px-6 py-12">
       {/* Logo Section */}
       <div className="text-center mb-12 animate-fade-in">
-        <div className="w-24 h-24 bg-primary rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-button">
-          <Truck className="w-12 h-12 text-primary-foreground" />
+        <div className="w-32 h-32 flex items-center justify-center mx-auto mb-6">
+           <img src="/logo.png" alt="SAS" className="w-full h-full object-contain" />
         </div>
         <h1 className="text-4xl font-bold text-foreground mb-2">SAS</h1>
         <p className="text-muted-foreground text-lg">منصة النقل الأولى في المملكة</p>
