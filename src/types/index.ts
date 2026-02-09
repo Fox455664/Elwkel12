@@ -1,36 +1,58 @@
 export type UserRole = 'driver' | 'shipper' | 'admin';
 
+export interface UserProfile {
+  id: string;
+  full_name: string;
+  phone: string;
+  role: UserRole;
+  country_code: string;
+  created_at: string;
+}
+
 export interface Driver {
   id: string;
-  name: string;
+  full_name: string;
   phone: string;
+  country_code: string;
   avatar?: string;
-  truckType: TruckType;
-  trailerType: TrailerType;
-  dimensions: TruckDimensions;
+  role: UserRole;
+  currentCity: string;
   rating: number;
   completedTrips: number;
   isAvailable: boolean;
-  currentCity: string;
-  registrationDate: string;
+  truckType?: TruckType;
+  created_at: string;
+  // تفاصيل إضافية من جدول driver_details
+  driver_details?: {
+    truck_type: TruckType;
+    trailer_type: TrailerType;
+    dimensions: TruckDimensions;
+  }[];
 }
 
 export interface Load {
   id: string;
-  ownerId: string;
-  ownerName: string;
-  ownerPhone: string;
+  owner_id: string;
   origin: string;
   destination: string;
+  originLat?: number;
+  originLng?: number;
+  destLat?: number;
+  destLng?: number;
   distance: number;
   estimatedTime: string;
   weight: number;
   description: string;
   price: number;
-  truckTypeRequired: TruckType;
+  truck_type_required: TruckType;
   status: LoadStatus;
-  createdAt: string;
-  expiresAt: string;
+  created_at: string;
+  // بيانات المالك (Joined Data)
+  profiles?: {
+    full_name: string;
+    phone: string;
+    country_code: string;
+  };
 }
 
 export type LoadStatus = 'available' | 'pending' | 'in_progress' | 'completed' | 'cancelled';
@@ -43,7 +65,8 @@ export type TruckType =
   | 'refrigerated' 
   | 'tanker'
   | 'flatbed'
-  | 'container';
+  | 'container'
+  | 'unknown';
 
 export type TrailerType = 
   | 'flatbed' 
@@ -83,12 +106,4 @@ export interface AdminStats {
   totalShippers: number;
   activeLoads: number;
   completedTrips: number;
-  pendingLoads: number;
-}
-
-export interface FeedbackData {
-  loadId: string;
-  driverId: string;
-  agreed: boolean;
-  notes?: string;
 }
