@@ -1,3 +1,5 @@
+--- START OF FILE Electricity-company-main/src/pages/admin/AdminDashboard.tsx ---
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
@@ -42,10 +44,20 @@ const AdminDashboard = () => {
           completedTrips: completedLoadsCount || 0
         });
 
-        const { data: driversData } = await supabase.from('profiles').select('*, driver_details(*)').eq('role', 'driver').order('created_at', { ascending: false });
+        // جلب السائقين مع تفاصيل مركباتهم
+        const { data: driversData } = await supabase
+          .from('profiles')
+          .select('*, driver_details(*)')
+          .eq('role', 'driver')
+          .order('created_at', { ascending: false });
+          
         if (driversData) setDrivers(driversData);
 
-        const { data: loadsData } = await supabase.from('loads').select('*, profiles:owner_id(full_name)').order('created_at', { ascending: false });
+        const { data: loadsData } = await supabase
+          .from('loads')
+          .select('*, profiles:owner_id(full_name)')
+          .order('created_at', { ascending: false });
+          
         if (loadsData) setLoads(loadsData);
 
       } catch (error) {
@@ -180,7 +192,6 @@ const AdminDashboard = () => {
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
-                      {/* تم تصحيح الخطأ هنا: تم استبدال </p> بـ </span> */}
                       <span className="text-sm font-bold text-primary">{load.price} {t('sar')}</span>
                     </div>
                   </div>
@@ -209,11 +220,12 @@ const AdminDashboard = () => {
 
             <div className="brand-card overflow-hidden">
               <div className="overflow-x-auto">
-                <table className="w-full">
+                {/* تم إضافة min-w-[600px] لمنع انضغاط الجدول في الموبايل */}
+                <table className="w-full min-w-[600px]">
                   <thead className="bg-muted">
                     <tr>
                       <th className="text-right p-4 font-semibold text-foreground">{t('driver')}</th>
-                      <th className="text-right p-4 font-semibold text-foreground hidden lg:table-cell">{t('phone_label')}</th>
+                      <th className="text-right p-4 font-semibold text-foreground">{t('phone_label')}</th>
                       <th className="text-right p-4 font-semibold text-foreground">{t('truck_label')}</th>
                       <th className="text-right p-4 font-semibold text-foreground">{t('registration_date')}</th>
                       <th className="p-4"></th>
@@ -224,7 +236,7 @@ const AdminDashboard = () => {
                       <tr key={driver.id} className="border-t border-border hover:bg-muted/50 transition-colors">
                         <td className="p-4">
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-muted rounded-full flex items-center justify-center">
+                            <div className="w-10 h-10 bg-muted rounded-full flex items-center justify-center shrink-0">
                               <Truck className="w-5 h-5 text-muted-foreground" />
                             </div>
                             <div>
@@ -232,9 +244,12 @@ const AdminDashboard = () => {
                             </div>
                           </div>
                         </td>
-                        <td className="p-4 hidden lg:table-cell text-muted-foreground" dir="ltr">{driver.country_code} {driver.phone}</td>
+                        <td className="p-4 text-muted-foreground" dir="ltr">{driver.country_code} {driver.phone}</td>
                         <td className="p-4 text-muted-foreground">
-                          {driver.driver_details?.[0]?.truck_type ? getTruckName(driver.driver_details[0].truck_type) : t('no_data')}
+                          {/* استرجاع نوع الشاحنة من مصفوفة driver_details */}
+                          {driver.driver_details?.[0]?.truck_type 
+                            ? getTruckName(driver.driver_details[0].truck_type) 
+                            : <span className="text-muted-foreground/50">{t('no_data')}</span>}
                         </td>
                         <td className="p-4 text-muted-foreground text-sm">
                           {new Date(driver.created_at).toLocaleDateString('ar-SA')}
