@@ -26,22 +26,38 @@ const LoginPage = () => {
   const [adminUser, setAdminUser] = useState('');
   const [adminPass, setAdminPass] = useState('');
 
+  // دالة مساعدة لتنظيف الرقم (إزالة الصفر من البداية)
+  const getCleanPhoneNumber = (phone: string) => {
+    return phone.startsWith('0') ? phone.substring(1) : phone;
+  };
+
   const handleSendOtp = async () => {
     if (phoneNumber.length < 9) return toast.error(t('error_phone'));
     setLoading(true);
+    
     try {
-      await api.sendOtp(phoneNumber, countryCode);
+      // تنظيف الرقم قبل الإرسال
+      const cleanPhone = getCleanPhoneNumber(phoneNumber);
+      
+      await api.sendOtp(cleanPhone, countryCode);
       setStep('otp');
-      toast.success(t('otp_sent_to') + ' ' + phoneNumber);
-    } catch (e) { toast.error(t('error_generic')); console.error(e); }
+      toast.success(t('otp_sent_to') + ' ' + countryCode + cleanPhone);
+    } catch (e) { 
+      toast.error(t('error_generic')); 
+      console.error(e); 
+    }
     setLoading(false);
   };
 
   const handleVerify = async () => {
     if (otp.length < 6) return;
     setLoading(true);
+    
     try {
-      const { profile } = await api.verifyOtp(phoneNumber, countryCode, otp);
+      // استخدام نفس الرقم النظيف عند التحقق
+      const cleanPhone = getCleanPhoneNumber(phoneNumber);
+
+      const { profile } = await api.verifyOtp(cleanPhone, countryCode, otp);
       setPhoneVerified(true);
       
       if (profile) {
@@ -52,9 +68,12 @@ const LoginPage = () => {
         navigate(profile.role === 'driver' ? '/driver/dashboard' : '/shipper');
       } else {
         toast.info(t('new_user_msg'));
+        // نمرر الرقم النظيف للتسجيل أيضاً إذا لزم الأمر
         navigate('/driver/registration', { state: { isNew: true, role } });
       }
-    } catch (e) { toast.error(t('error_otp')); }
+    } catch (e) { 
+      toast.error(t('error_otp')); 
+    }
     setLoading(false);
   };
 
@@ -72,7 +91,6 @@ const LoginPage = () => {
     <div className="min-h-screen bg-background flex flex-col justify-center px-6">
       <div className="text-center mb-8">
         <div className="flex justify-center mb-4">
-          {/* هنا تم إضافة الشعار */}
           <div className="w-28 h-28 flex items-center justify-center">
              <img src="/logo.png" alt="SAS" className="w-full h-full object-contain" />
           </div>
