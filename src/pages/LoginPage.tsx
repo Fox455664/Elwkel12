@@ -26,7 +26,21 @@ const LoginPage = () => {
   const [adminUser, setAdminUser] = useState('');
   const [adminPass, setAdminPass] = useState('');
 
-  // دالة مساعدة لتنظيف الرقم (إزالة الصفر من البداية)
+  // --- دالة جديدة لاستخراج تفاصيل الخطأ ---
+  const getErrorMessage = (error: any) => {
+    // 1. إذا كان الخطأ من السيرفر (API Response)
+    if (error.response && error.response.data) {
+      // غالباً الرسالة تكون في message أو error
+      return error.response.data.message || error.response.data.error || JSON.stringify(error.response.data);
+    }
+    // 2. إذا كان خطأ اتصال (Network) أو كود
+    if (error.message) return error.message;
+    
+    // 3. غير ذلك
+    return "Unknown Error";
+  };
+  // ----------------------------------------
+
   const getCleanPhoneNumber = (phone: string) => {
     return phone.startsWith('0') ? phone.substring(1) : phone;
   };
@@ -36,15 +50,15 @@ const LoginPage = () => {
     setLoading(true);
     
     try {
-      // تنظيف الرقم قبل الإرسال
       const cleanPhone = getCleanPhoneNumber(phoneNumber);
-      
       await api.sendOtp(cleanPhone, countryCode);
       setStep('otp');
       toast.success(t('otp_sent_to') + ' ' + countryCode + cleanPhone);
-    } catch (e) { 
-      toast.error(t('error_generic')); 
-      console.error(e); 
+    } catch (e: any) { 
+      console.error(e);
+      // تعديل هنا: عرض رسالة الخطأ التفصيلية
+      const detailedError = getErrorMessage(e);
+      toast.error(`${t('error_generic')}: ${detailedError}`); 
     }
     setLoading(false);
   };
@@ -54,25 +68,24 @@ const LoginPage = () => {
     setLoading(true);
     
     try {
-      // استخدام نفس الرقم النظيف عند التحقق
       const cleanPhone = getCleanPhoneNumber(phoneNumber);
-
       const { profile } = await api.verifyOtp(cleanPhone, countryCode, otp);
       setPhoneVerified(true);
       
       if (profile) {
         setUserProfile(profile);
         setCurrentRole(profile.role);
-        
         toast.success(t('success_login'));
         navigate(profile.role === 'driver' ? '/driver/dashboard' : '/shipper');
       } else {
         toast.info(t('new_user_msg'));
-        // نمرر الرقم النظيف للتسجيل أيضاً إذا لزم الأمر
         navigate('/driver/registration', { state: { isNew: true, role } });
       }
-    } catch (e) { 
-      toast.error(t('error_otp')); 
+    } catch (e: any) { 
+      console.error(e);
+      // تعديل هنا: عرض رسالة الخطأ التفصيلية
+      const detailedError = getErrorMessage(e);
+      toast.error(`${t('error_otp')}: ${detailedError}`);
     }
     setLoading(false);
   };
@@ -83,7 +96,12 @@ const LoginPage = () => {
       await api.loginAdmin(adminUser, adminPass);
       setCurrentRole('admin');
       navigate('/admin');
-    } catch (e) { toast.error(t('error_generic')); }
+    } catch (e: any) { 
+        console.error(e);
+        // تعديل هنا أيضاً
+        const detailedError = getErrorMessage(e);
+        toast.error(`Login Failed: ${detailedError}`);
+    }
     setLoading(false);
   };
 
