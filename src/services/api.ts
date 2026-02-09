@@ -1,17 +1,14 @@
+--- START OF FILE Electricity-company-main/src/services/api.ts ---
+
 import { supabase } from '@/lib/supabase';
-// تأكد من وجود تعريفات الأنواع، أو يمكنك استخدام any مؤقتاً إذا لم تكن موجودة
-import { UserRole } from '@/types'; 
 
 export const api = {
   // --------------------------------------------------------
-  // 1. دوال المصادقة (كانت ناقصة في كودك)
+  // 1. دوال المصادقة
   // --------------------------------------------------------
 
-  // إرسال رمز التحقق (OTP)
   async sendOtp(phone: string, countryCode: string) {
-    // تجميع الرقم بالصيغة الدولية: +96650xxxxxxx
     const fullPhone = `${countryCode}${phone}`;
-    
     const { error } = await supabase.auth.signInWithOtp({
       phone: fullPhone,
     });
@@ -20,11 +17,9 @@ export const api = {
     return { success: true };
   },
 
-  // التحقق من الرمز وتسجيل الدخول
   async verifyOtp(phone: string, countryCode: string, token: string) {
     const fullPhone = `${countryCode}${phone}`;
 
-    // 1. التحقق من الكود مع Supabase Auth
     const { data: authData, error: authError } = await supabase.auth.verifyOtp({
       phone: fullPhone,
       token: token,
@@ -34,17 +29,12 @@ export const api = {
     if (authError) throw new Error(authError.message);
     if (!authData.user) throw new Error("فشل التحقق من المستخدم");
 
-    // 2. جلب بيانات البروفايل من جدول profiles
-    // نفترض أن جدول البروفايل اسمه 'profiles' وأن الـ id هو نفس الـ uuid حق الـ auth
-    const { data: profile, error: profileError } = await supabase
+    const { data: profile } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', authData.user.id)
       .single();
 
-    // إذا لم يكن للمستخدم بروفايل (مستخدم جديد)، نرجع null في البروفايل ليتم توجيهه للتسجيل
-    // ملاحظة: profileError قد يظهر إذا لم يوجد صف، وهذا طبيعي للمستخدم الجديد
-    
     return { 
       session: authData.session,
       user: authData.user,
@@ -52,7 +42,6 @@ export const api = {
     };
   },
 
-  // تسجيل دخول الأدمن (إيميل وباسورد)
   async loginAdmin(email: string, pass: string) {
     const { data, error } = await supabase.auth.signInWithPassword({
       email: email,
@@ -63,12 +52,10 @@ export const api = {
     return data;
   },
 
-  // إنشاء بروفايل جديد (بعد التحقق من الرقم لأول مرة)
-  async createProfile(profileData: any) {
-    // يجب أن يكون المستخدم مسجلاً دخولاً حالياً لإنشاء بروفايل لنفسه
+  async createProfile(userId: string, fullName: string, role: string, phone: string, countryCode: string) {
     const { data, error } = await supabase
       .from('profiles')
-      .insert([profileData])
+      .insert([{ id: userId, full_name: fullName, role, phone, country_code: countryCode }])
       .select()
       .single();
 
@@ -77,19 +64,82 @@ export const api = {
   },
 
   // --------------------------------------------------------
-  // 2. دوال الحمولات (Loads) والسائقين
+  // 2. دوال تفاصيل السائق (تمت إضافتها)
   // --------------------------------------------------------
+
+  async saveDriverDetails(userId: string, details: any) {
+    const { data, error } = await supabase
+      .from('driver_details')
+      .upsert({ user_id: userId, ...details })
+      .select()
+      .single();
+
+    if (error) throw new Error(error.message);
+    return data;
+  },
+
+  async getDriverDetails(userId: string) {
+    const { data, error } = await supabase
+      .from('driver_details')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
+
+    if (error && error.code !== 'PGRST116') throw new Error(error.message);
+    return data;
+  },
+
+  async getAvailableDrivers() {
+    // جلب السائقين مع تفاصيل مركباتهم
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*, driver_details(*)')
+      .eq('role', 'driver');
+
+    if (error) throw new Error(error.message);
+    
+    // تنسيق البيانات لتناسب الواجهة
+    return data.map((d: any) => ({
+      id: d.id,
+      name: d.full_name,
+      phone: d.phone,
+      countryCode: d.country_code,
+      currentCity: d.current_city || 'الرياض', // افتراضي
+      // التأكد من وجود تفاصيل السائق
+      truckType: d.driver_details?.[0]?.truck_type || null, 
+      created_at: d.created_at
+    }));
+  },
+
+  // --------------------------------------------------------
+  // 3. دوال الحمولات (تم تحديثها)
+  // --------------------------------------------------------
+
+  async postLoad(loadData: any, userId: string) {
+    const { data, error } = await supabase
+      .from('loads')
+      .insert([{
+        ...loadData,
+        owner_id: userId,
+        status: 'available',
+        created_at: new Date().toISOString()
+      }])
+      .select()
+      .single();
+
+    if (error) throw new Error(error.message);
+    return data;
+  },
 
   async getLoads() {
     const { data, error } = await supabase
       .from('loads')
-      .select('*, profiles:owner_id(full_name, phone)') // تأكد أن العلاقة اسمها profiles في Supabase
+      .select('*, profiles:owner_id(full_name, phone)')
       .eq('status', 'available')
       .order('created_at', { ascending: false });
     
     if (error) throw new Error(error.message);
     
-    // تنسيق البيانات كما يتوقعها التطبيق
     return data.map((l: any) => ({
       ...l,
       ownerName: l.profiles?.full_name || 'مستخدم',
@@ -128,7 +178,7 @@ export const api = {
     const { error } = await supabase
       .from('loads')
       .update({ 
-        status: 'in_progress', // يفضل in_progress بدل completed عند القبول
+        status: 'in_progress', 
         driver_id: driverId 
       })
       .eq('id', loadId);
