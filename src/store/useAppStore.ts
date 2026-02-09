@@ -1,15 +1,6 @@
 import { create } from 'zustand';
-import { UserRole, TruckType, TrailerType, TruckDimensions, Driver, Load } from '@/types';
-
-// تعريف شكل بيانات المستخدم القادمة من قاعدة البيانات
-interface UserProfile {
-  id: string;
-  full_name: string;
-  phone: string;
-  role: UserRole;
-  country_code: string;
-  created_at?: string; // تمت إضافة هذا الحقل لحساب مدة الاشتراك
-}
+import { persist } from 'zustand/middleware';
+import { UserRole, TruckType, TrailerType, TruckDimensions, Driver, Load, UserProfile } from '@/types';
 
 interface AppState {
   currentRole: UserRole | null;
@@ -24,21 +15,15 @@ interface AppState {
   isPhoneVerified: boolean;
   setPhoneVerified: (verified: boolean) => void;
   
+  // Registration Flow Data
   selectedTruckType: TruckType | null;
   setSelectedTruckType: (type: TruckType | null) => void;
-  
   selectedTrailerType: TrailerType | null;
   setSelectedTrailerType: (type: TrailerType | null) => void;
-  
   selectedDimensions: TruckDimensions | null;
   setSelectedDimensions: (dim: TruckDimensions | null) => void;
   
-  isRegistrationComplete: boolean;
-  setRegistrationComplete: (complete: boolean) => void;
-  
-  currentDriver: Driver | null;
-  setCurrentDriver: (driver: Driver | null) => void;
-  
+  // Runtime Data
   selectedLoad: Load | null;
   setSelectedLoad: (load: Load | null) => void;
   
@@ -59,30 +44,40 @@ const initialState = {
   selectedTruckType: null,
   selectedTrailerType: null,
   selectedDimensions: null,
-  isRegistrationComplete: false,
-  currentDriver: null,
   selectedLoad: null,
   showFeedbackModal: false,
   userProfile: null,
 };
 
-export const useAppStore = create<AppState>((set) => ({
-  ...initialState,
-  
-  setCurrentRole: (role) => set({ currentRole: role }),
-  setCountryCode: (code) => set({ countryCode: code }),
-  setPhoneNumber: (phone) => set({ phoneNumber: phone }),
-  setPhoneVerified: (verified) => set({ isPhoneVerified: verified }),
-  setSelectedTruckType: (type) => set({ selectedTruckType: type }),
-  setSelectedTrailerType: (type) => set({ selectedTrailerType: type }),
-  setSelectedDimensions: (dim) => set({ selectedDimensions: dim }),
-  setRegistrationComplete: (complete) => set({ isRegistrationComplete: complete }),
-  setCurrentDriver: (driver) => set({ currentDriver: driver }),
-  setSelectedLoad: (load) => set({ selectedLoad: load }),
-  setShowFeedbackModal: (show) => set({ showFeedbackModal: show }),
-  
-  // دالة حفظ البروفايل
-  setUserProfile: (profile) => set({ userProfile: profile }),
-  
-  reset: () => set(initialState),
-}));
+export const useAppStore = create<AppState>()(
+  persist(
+    (set) => ({
+      ...initialState,
+      
+      setCurrentRole: (role) => set({ currentRole: role }),
+      setCountryCode: (code) => set({ countryCode: code }),
+      setPhoneNumber: (phone) => set({ phoneNumber: phone }),
+      setPhoneVerified: (verified) => set({ isPhoneVerified: verified }),
+      
+      setSelectedTruckType: (type) => set({ selectedTruckType: type }),
+      setSelectedTrailerType: (type) => set({ selectedTrailerType: type }),
+      setSelectedDimensions: (dim) => set({ selectedDimensions: dim }),
+      
+      setSelectedLoad: (load) => set({ selectedLoad: load }),
+      setShowFeedbackModal: (show) => set({ showFeedbackModal: show }),
+      
+      setUserProfile: (profile) => set({ userProfile: profile }),
+      
+      reset: () => set(initialState),
+    }),
+    {
+      name: 'sas-transport-storage', // اسم المفتاح في LocalStorage
+      partialize: (state) => ({ 
+        // نحدد ما نريد حفظه فقط عند إعادة تحميل الصفحة
+        currentRole: state.currentRole, 
+        userProfile: state.userProfile,
+        countryCode: state.countryCode
+      }), 
+    }
+  )
+);
