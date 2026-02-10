@@ -8,9 +8,6 @@ export const api = {
   // 1. نظام المصادقة (Authentication)
   // ==========================================
 
-  /**
-   * إرسال كود التحقق للبريد الإلكتروني (بداية عملية التسجيل)
-   */
   async sendEmailOtp(email: string, pass: string, metadata: any) {
     const { data, error } = await supabase.auth.signUp({
       email: email,
@@ -24,9 +21,6 @@ export const api = {
     return data;
   },
 
-  /**
-   * التحقق من الكود (OTP) وإنشاء البروفايل في جدول profiles
-   */
   async registerUser(payload: any) {
     const { data: authData, error: authError } = await supabase.auth.verifyOtp({
       email: payload.email,
@@ -36,7 +30,6 @@ export const api = {
 
     if (authError) throw authError;
 
-    // إنشاء سجل في جدول البروفايلات الحقيقي لربط بيانات المستخدم
     const { data: profile, error: pErr } = await supabase
       .from('profiles')
       .insert([
@@ -56,9 +49,6 @@ export const api = {
     return { user: authData.user, profile };
   },
 
-  /**
-   * تسجيل دخول المستخدمين العاديين
-   */
   async loginByEmail(email: string, pass: string) {
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
@@ -76,9 +66,6 @@ export const api = {
     return { session: data.session, user: data.user, profile: profile as UserProfile };
   },
 
-  /**
-   * تسجيل دخول الإدارة (Admin) مع التحقق من الصلاحية
-   */
   async loginAdmin(email: string, pass: string) {
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
@@ -99,9 +86,6 @@ export const api = {
     return data;
   },
 
-  /**
-   * استعادة كلمة المرور عبر البريد
-   */
   async forgotPassword(email: string) {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: window.location.origin + '/reset-password',
@@ -114,9 +98,6 @@ export const api = {
   // 2. نظام السائقين والمركبات (Drivers & Trucks)
   // ==========================================
 
-  /**
-   * حفظ بيانات مركبة السائق (تستخدم في المعالج بعد التسجيل مباشرة)
-   */
   async saveDriverVehicle(userId: string, data: any) {
     const { error } = await supabase
       .from('driver_details')
@@ -133,9 +114,6 @@ export const api = {
     return true;
   },
 
-  /**
-   * إضافة شاحنة إضافية لحساب الناقل
-   */
   async addTruck(truckData: any, userId: string) {
     const { error } = await supabase
       .from('trucks')
@@ -149,9 +127,6 @@ export const api = {
     if (error) throw error;
   },
 
-  /**
-   * إضافة سائق تابع للشركة (Sub-driver)
-   */
   async addSubDriver(driverData: any, carrierId: string) {
     const { error } = await supabase
       .from('sub_drivers')
@@ -164,9 +139,6 @@ export const api = {
     if (error) throw error;
   },
 
-  /**
-   * جلب السائقين المتاحين (يستخدمها الشاحن)
-   */
   async getAvailableDrivers() {
     const { data, error } = await supabase
       .from('profiles')
@@ -179,9 +151,6 @@ export const api = {
     return data;
   },
 
-  /**
-   * جلب تفاصيل السائق (لصفحة حسابي)
-   */
   async getDriverDetails(userId: string) {
     const { data, error } = await supabase
         .from('driver_details')
@@ -196,9 +165,6 @@ export const api = {
   // 3. نظام الحمولات (Loads & Shipments)
   // ==========================================
 
-  /**
-   * نشر حمولة جديدة (من معالج الـ 5 خطوات الحقيقي للشاحن)
-   */
   async postLoad(loadData: any, userId: string) {
     const { error } = await supabase
       .from('loads')
@@ -224,9 +190,6 @@ export const api = {
     if (error) throw error;
   },
 
-  /**
-   * جلب كافة الحمولات المتاحة (يستخدمها السائق)
-   */
   async getLoads() {
     const { data, error } = await supabase
       .from('loads')
@@ -237,9 +200,6 @@ export const api = {
     return data;
   },
 
-  /**
-   * جلب تفاصيل حمولة واحدة بالـ ID
-   */
   async getLoadById(id: string) {
     const { data, error } = await supabase
       .from('loads')
@@ -250,29 +210,70 @@ export const api = {
     return data;
   },
 
+  // --- دوال جديدة تم إضافتها لإصلاح النواقص ---
+
+  /**
+   * قبول السائق للحمولة
+   */
+  async acceptLoad(loadId: string, driverId: string) {
+    const { error } = await supabase
+      .from('loads')
+      .update({ 
+        status: 'in_progress', // أو 'completed' حسب منطق الاتفاق المباشر
+        driver_id: driverId 
+      })
+      .eq('id', loadId);
+    
+    if (error) throw error;
+  },
+
+  /**
+   * جلب سجل رحلات السائق (المنتهية أو الملغاة أو الجارية)
+   */
+  async getDriverHistory(driverId: string) {
+    const { data, error } = await supabase
+      .from('loads')
+      .select('*')
+      .eq('driver_id', driverId)
+      .order('created_at', { ascending: false });
+      
+    if (error) throw error;
+    return data;
+  },
+
+  /**
+   * إلغاء الحمولة (إعادتها لحالة "متاحة")
+   */
+  async cancelLoad(loadId: string) {
+    const { error } = await supabase
+      .from('loads')
+      .update({ 
+        status: 'available',
+        driver_id: null 
+      })
+      .eq('id', loadId);
+      
+    if (error) throw error;
+  },
+
   // ==========================================
   // 4. الإحصائيات (Dashboard Stats)
   // ==========================================
 
-  /**
-   * إحصائيات السائق الحالية
-   */
   async getDriverStats(userId: string) {
     const { count } = await supabase
       .from('loads')
       .select('*', { count: 'exact', head: true })
+      .eq('driver_id', userId)
       .eq('status', 'in_progress');
     
     return {
       activeLoads: count || 0,
-      earnings: 15000, // يمكن ربطها لاحقاً بجدول المحفظة (Wallet)
+      earnings: 15000, 
       rating: 4.8
     };
   },
 
-  /**
-   * إحصائيات لوحة الإدارة (Admin Stats) الحقيقية
-   */
   async getAdminStats(): Promise<AdminStats> {
     const { count: users } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
     const { count: loads } = await supabase.from('loads').select('*', { count: 'exact', head: true });
