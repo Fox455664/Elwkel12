@@ -1,12 +1,12 @@
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react-swc";
+import path from "path";
 
-// https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
-  // أضف هذا الجزء الخاص بالـ build
-  build: {
-    minify: false, // هذا سيمنع ضغط الكود ويظهر أسماء المتغيرات الحقيقية
-    sourcemap: true, // هذا سيساعدك في معرفة رقم السطر في الملف الأصلي
+  resolve: {
+    alias: {
+      "@": path.resolve(__dirname, "./src"),
+    },
   },
 });
