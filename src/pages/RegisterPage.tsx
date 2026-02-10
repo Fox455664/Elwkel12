@@ -1,14 +1,20 @@
-import { useState } from 'react';
+// --- START OF FILE Electricity-company-main/src/pages/RegisterPage.tsx ---
+
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAppStore } from '@/store/useAppStore';
 import { api } from '@/services/api';
-import { Loader2, Truck, Package, ArrowRight, ArrowLeft } from 'lucide-react';
+import { Loader2, Truck, Package, ArrowRight, ArrowLeft, RefreshCw } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
+
+// ⚙️ إعدادات الـ OTP
+const OTP_LENGTH = 7; // ✅ تم التعديل إلى 7 أرقام
+const RESEND_COOLDOWN = 60; // وقت الانتظار بالثواني
 
 const RegisterPage = () => {
   const navigate = useNavigate();
@@ -17,6 +23,9 @@ const RegisterPage = () => {
 
   const [step, setStep] = useState<number>(1);
   const [loading, setLoading] = useState(false);
+
+  // حالة العداد التنازلي
+  const [timer, setTimer] = useState(0);
 
   const [role, setRole] = useState<'driver' | 'shipper'>('driver');
   const [formData, setFormData] = useState({
@@ -28,13 +37,24 @@ const RegisterPage = () => {
   });
   const [otp, setOtp] = useState('');
 
+  // 🕒 تفعيل العداد التنازلي
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (timer > 0) {
+      interval = setInterval(() => {
+        setTimer((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [timer]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const confirmRole = () => setStep(2);
 
-  // الخطوة 2: إرسال الرمز (بدء الـ SignUp)
+  // الخطوة 2: إرسال الرمز (Start SignUp)
   const handleSendEmailOtp = async () => {
     if (!formData.name || !formData.email || !formData.phone || !formData.password) {
       return toast.error(t('fill_all_fields'));
@@ -45,7 +65,6 @@ const RegisterPage = () => {
 
     setLoading(true);
     try {
-      // نرسل الباسورد والبيانات لإنشاء المستخدم وإرسال الرمز
       await api.sendEmailOtp(formData.email, formData.password, {
         full_name: formData.name,
         role: role,
@@ -54,19 +73,41 @@ const RegisterPage = () => {
       
       toast.success(`${t('otp_sent_email')} ${formData.email}`);
       setStep(3);
+      setTimer(RESEND_COOLDOWN); // بدء العداد
     } catch (error: any) {
       console.error(error);
-      // استخدام error.message للحصول على نص الخطأ الفعلي
       toast.error(error.message || t('error_generic'));
     }
     setLoading(false);
   };
 
-  // الخطوة 3: التحقق النهائي
-  const handleRegister = async () => {
-    if (otp.length < 6) return;
+  // إعادة إرسال الرمز
+  const handleResendOtp = async () => {
+    if (timer > 0) return;
+    
     setLoading(true);
+    try {
+      await api.sendEmailOtp(formData.email, formData.password, {
+        full_name: formData.name,
+        role: role,
+        phone: formData.phone
+      });
+      
+      toast.success(t('otp_sent_to_msg'));
+      setTimer(RESEND_COOLDOWN);
+    } catch (error: any) {
+      toast.error(error.message || "فشل إعادة الإرسال، حاول لاحقاً");
+    }
+    setLoading(false);
+  };
 
+  // الخطوة 3: التحقق النهائي (Verify)
+  const handleRegister = async () => {
+    if (otp.length < OTP_LENGTH) {
+      return toast.error(`يرجى إدخال الكود المكون من ${OTP_LENGTH} أرقام`);
+    }
+    
+    setLoading(true);
     try {
       const payload = {
         role,
@@ -86,7 +127,13 @@ const RegisterPage = () => {
 
     } catch (error: any) {
       console.error(error);
-      toast.error(error.message || t('error_otp'));
+      let msg = error.message;
+      
+      if (msg.includes("Invalid token") || msg.includes("Token has expired")) {
+        msg = "رمز التحقق غير صحيح أو منتهي الصلاحية";
+      }
+      
+      toast.error(msg || t('error_otp'));
     }
     setLoading(false);
   };
@@ -103,9 +150,9 @@ const RegisterPage = () => {
 
         <div className="brand-card p-6 space-y-6">
           
-          {/* STEP 1: Role */}
+          {/* STEP 1: Role Selection */}
           {step === 1 && (
-            <div className="space-y-4">
+            <div className="space-y-4 animate-fade-in">
               <p className="text-center font-medium mb-4">{t('select_account_type')}</p>
               
               <div 
@@ -138,33 +185,33 @@ const RegisterPage = () => {
             </div>
           )}
 
-          {/* STEP 2: Info (تصحيح مفاتيح الترجمة هنا) */}
+          {/* STEP 2: Personal Info */}
           {step === 2 && (
-            <div className="space-y-4">
-               <div className="flex items-center gap-2 mb-2 cursor-pointer text-sm text-muted-foreground" onClick={() => setStep(1)}>
+            <div className="space-y-4 animate-fade-in">
+               <div className="flex items-center gap-2 mb-2 cursor-pointer text-sm text-muted-foreground hover:text-primary transition-colors" onClick={() => setStep(1)}>
                  <ArrowLeft className="w-4 h-4" /> {t('back')}
                </div>
 
                <div className="space-y-3">
                  <div>
                    <Label>{t('full_name')}</Label>
-                   <Input name="name" value={formData.name} onChange={handleChange} placeholder={t('name_placeholder')} />
+                   <Input name="name" value={formData.name} onChange={handleChange} placeholder={t('name_placeholder')} className="text-right" />
                  </div>
                  <div>
-                   <Label>{t('phone_label')}</Label> {/* تم التصحيح */}
-                   <Input name="phone" type="tel" value={formData.phone} onChange={handleChange} placeholder="05xxxxxxxx" />
+                   <Label>{t('phone_label')}</Label>
+                   <Input name="phone" type="tel" value={formData.phone} onChange={handleChange} placeholder="05xxxxxxxx" className="text-left" dir="ltr" />
                  </div>
                  <div>
-                   <Label>{t('email_label')}</Label> {/* تم التصحيح */}
-                   <Input name="email" type="email" value={formData.email} onChange={handleChange} placeholder="name@example.com" />
+                   <Label>{t('email_label')}</Label>
+                   <Input name="email" type="email" value={formData.email} onChange={handleChange} placeholder="name@example.com" className="text-left" dir="ltr" />
                  </div>
                  <div>
-                   <Label>{t('password_label')}</Label> {/* تم التصحيح */}
-                   <Input name="password" type="password" value={formData.password} onChange={handleChange} />
+                   <Label>{t('password_label')}</Label>
+                   <Input name="password" type="password" value={formData.password} onChange={handleChange} dir="ltr" />
                  </div>
                  <div>
                    <Label>{t('confirm_password')}</Label>
-                   <Input name="confirmPassword" type="password" value={formData.confirmPassword} onChange={handleChange} />
+                   <Input name="confirmPassword" type="password" value={formData.confirmPassword} onChange={handleChange} dir="ltr" />
                  </div>
                </div>
 
@@ -174,39 +221,62 @@ const RegisterPage = () => {
             </div>
           )}
 
-          {/* STEP 3: OTP */}
-          {step === 3 && (
-            <div className="space-y-6 text-center">
-               <div className="flex items-center gap-2 mb-2 cursor-pointer text-sm text-muted-foreground" onClick={() => setStep(2)}>
-                 <ArrowLeft className="w-4 h-4" /> {t('back')}
-               </div>
+        {/* STEP 3: OTP Verification */}
+        {step === 3 && (
+            <div className="space-y-6 text-center animate-fade-in">
+                <div className="flex items-center gap-2 mb-2 cursor-pointer text-sm text-muted-foreground hover:text-primary transition-colors" onClick={() => setStep(2)}>
+                    <ArrowLeft className="w-4 h-4" /> {t('back')}
+                </div>
 
-               <div>
-                 <h3 className="font-bold text-lg">{t('check_email')}</h3>
-                 <p className="text-sm text-muted-foreground mt-2">
-                   {t('otp_sent_to_msg')} <br/><span className="font-medium text-foreground">{formData.email}</span>
-                 </p>
-               </div>
+                <div>
+                    <h3 className="font-bold text-lg">{t('check_email')}</h3>
+                    <p className="text-sm text-muted-foreground mt-2">
+                    {t('otp_sent_to_msg')} <br/><span className="font-medium text-foreground dir-ltr block mt-1">{formData.email}</span>
+                    </p>
+                </div>
 
-               <div className="flex justify-center" dir="ltr">
-                  <InputOTP maxLength={6} value={otp} onChange={setOtp}>
-                    <InputOTPGroup>
-                      {[0,1,2,3,4,5].map(i => <InputOTPSlot key={i} index={i} className="h-12 w-10 sm:w-12" />)}
+                <div className="flex justify-center w-full" dir="ltr">
+                    <InputOTP maxLength={OTP_LENGTH} value={otp} onChange={setOtp}>
+                    <InputOTPGroup className="gap-2">
+                        {Array.from({ length: OTP_LENGTH }).map((_, i) => (
+                        <InputOTPSlot 
+                            key={i} 
+                            index={i} 
+                            className="h-12 w-10 sm:w-12 border-2 rounded-md focus:border-primary focus:ring-primary" 
+                        />
+                        ))}
                     </InputOTPGroup>
-                  </InputOTP>
-               </div>
+                    </InputOTP>
+                </div>
 
-               <Button className="w-full h-12" onClick={handleRegister} disabled={loading || otp.length < 6}>
-                 {loading ? <Loader2 className="animate-spin" /> : t('complete_registration')}
-               </Button>
+                <div className="space-y-3">
+                    <Button className="w-full h-12 font-bold text-lg" onClick={handleRegister} disabled={loading || otp.length < OTP_LENGTH}>
+                    {loading ? <Loader2 className="animate-spin" /> : t('complete_registration')}
+                    </Button>
+
+                    <button 
+                    onClick={handleResendOtp}
+                    disabled={timer > 0 || loading}
+                    className="flex items-center justify-center gap-2 text-sm text-muted-foreground hover:text-primary disabled:opacity-50 disabled:cursor-not-allowed mx-auto transition-colors"
+                    >
+                    {timer > 0 ? (
+                        <span>إعادة الإرسال بعد {timer} ثانية</span>
+                    ) : (
+                        <>
+                        <RefreshCw className="w-4 h-4" />
+                        {t('resend_code')}
+                        </>
+                    )}
+                    </button>
+                </div>
             </div>
-          )}
+        )}
 
         </div>
 
         <div className="text-center mt-6">
           <span className="text-muted-foreground">{t('have_account')} </span>
-          <Link to="/login" className="text-primary font-bold hover:underline">
+          <Link to="/login" className="text-primary font-bold hover:underline transition-all">
             {t('login_btn')}
           </Link>
         </div>
