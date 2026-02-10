@@ -1,5 +1,5 @@
 import { Navigate, Outlet } from 'react-router-dom';
-import { useAppStore } from '@/store/useAppStore';
+import { useAppStore } from '@/store/appStore';
 import { UserRole } from '@/types';
 
 interface ProtectedRouteProps {

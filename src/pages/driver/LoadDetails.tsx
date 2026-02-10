@@ -1,6 +1,6 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Phone, MessageCircle, MapPin, Clock, Weight, User, Calendar, Loader2, Route } from 'lucide-react';
-import { useAppStore } from '@/store/useAppStore';
+import { useAppStore } from '@/store/appStore';
 import { useEffect, useState } from 'react';
 import { api } from '@/services/api';
 import { getTruckTypeInfo } from '@/data/mockData';

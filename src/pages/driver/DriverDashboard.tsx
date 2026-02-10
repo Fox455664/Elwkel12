@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Truck, Users, PlusCircle, FileText, Bell, Loader2, ArrowUpRight, MapPin } from 'lucide-react';
-import { useAppStore } from '@/store/useAppStore';
+import { useAppStore } from '@/store/appStore';
 import { api } from '@/services/api'; 
 import { useTranslation } from 'react-i18next';
 

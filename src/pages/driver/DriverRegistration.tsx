@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAppStore } from '@/store/useAppStore';
+import { useAppStore } from '@/store/appStore';
 import { api } from '@/services/api';
 import { supabase } from '@/lib/supabase';
 import { ArrowRight, ArrowLeft, Loader2, Check, Truck, Box, Ruler, CreditCard } from 'lucide-react';

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useAppStore } from '@/store/useAppStore';
+import { useAppStore } from '@/store/appStore';
 import { api } from '@/services/api';
 import { Loader2, Truck, Package, ArrowRight, ArrowLeft, RefreshCw, CheckCircle2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';

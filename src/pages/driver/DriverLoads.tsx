@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '@/services/api';
-import { useAppStore } from '@/store/useAppStore';
+import { useAppStore } from '@/store/appStore';
 import { ArrowLeft, Loader2, MapPin, Clock, Weight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, User, Truck, Star, LogOut, ChevronLeft, Settings, Bell, HelpCircle } from 'lucide-react';
-import { useAppStore } from '@/store/useAppStore';
+import { useAppStore } from '@/store/appStore';
 import { api } from '@/services/api';
 import { getTruckTypeInfo, getTrailerTypeInfo, getDimensionInfo } from '@/data/mockData';
 import { useTranslation } from 'react-i18next';

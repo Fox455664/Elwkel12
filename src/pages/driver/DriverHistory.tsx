@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Clock, CheckCircle, XCircle, Loader2, Trash2 } from 'lucide-react';
 import { api } from '@/services/api';
-import { useAppStore } from '@/store/useAppStore';
+import { useAppStore } from '@/store/appStore';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 

@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { useAppStore } from '@/store/useAppStore';
+import { useAppStore } from '@/store/appStore';
 import { X, Truck, MapPin, AlertTriangle, Check, XCircle, PhoneOff, HelpCircle, Loader2 } from 'lucide-react';
 import { api } from '@/services/api';
 import { supabase } from '@/lib/supabase';

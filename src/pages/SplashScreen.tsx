@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { useAppStore } from '@/store/useAppStore';
+import { useAppStore } from '@/store/appStore';
 import { UserRole } from '@/types';
 import { Truck, Package, Settings } from 'lucide-react';
 
