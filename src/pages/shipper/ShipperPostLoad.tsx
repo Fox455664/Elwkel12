@@ -1,211 +1,229 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '@/services/api';
 import { supabase } from '@/lib/supabase';
-import { truckTypes } from '@/data/mockData';
-import { ArrowLeft, Weight, DollarSign, Loader2, Route } from 'lucide-react';
+import { ArrowLeft, Package, User, MapPin, Check, Plus, Trash2, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
 import { SmartLocationSelect } from '@/components/SmartLocationSelect';
-import { calculateDistanceOSM } from '@/services/mapService';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useTranslation } from 'react-i18next';
+import { Product, Receiver } from '@/types';
 
 export default function ShipperPostLoad() {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const [formData, setFormData] = useState({ 
-    origin: '', 
-    originLat: 0, 
+  const [step, setStep] = useState(1);
+  const [loading, setLoading] = useState(false);
+
+  // حالة النموذج
+  const [shipmentData, setShipmentData] = useState({
+    type: '',
+    package_type: '',
+    origin: '',
+    originLat: 0,
     originLng: 0,
-    destination: '', 
+    destination: '',
     destLat: 0,
     destLng: 0,
-    weight: '', 
-    price: '', 
-    description: '', 
-    truckType: '' 
+    date: '',
+    price: '',
+    weight: '',
+    truck_type: ''
   });
+
+  const [products, setProducts] = useState<Product[]>([]);
+  const [currentProduct, setCurrentProduct] = useState<Partial<Product>>({});
   
-  const [routeInfo, setRouteInfo] = useState<{distance: string, duration: string} | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [calculating, setCalculating] = useState(false);
+  const [receiver, setReceiver] = useState<Receiver>({
+    name: '',
+    phone: '',
+    address: ''
+  });
 
-  useEffect(() => {
-    const getRoute = async () => {
-      if (formData.originLat && formData.destLat) {
-        setCalculating(true);
-        const info = await calculateDistanceOSM(
-          formData.originLat, 
-          formData.originLng, 
-          formData.destLat, 
-          formData.destLng
-        );
-        if (info) {
-          setRouteInfo({ distance: info.distance, duration: info.duration });
-        }
-        setCalculating(false);
-      }
-    };
+  const handleAddProduct = () => {
+    if (!currentProduct.name || !currentProduct.quantity) return;
+    setProducts([...products, { ...currentProduct, id: Math.random().toString() } as Product]);
+    setCurrentProduct({});
+  };
 
-    getRoute();
-  }, [formData.originLat, formData.destLat, formData.originLng, formData.destLng]);
+  const handleRemoveProduct = (id: string) => {
+    setProducts(products.filter(p => p.id !== id));
+  };
 
   const handleSubmit = async () => {
-    if (!formData.origin || !formData.destination || !formData.price) {
-      toast.error(t('fill_fields_error'));
-      return;
-    }
-
     setLoading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not logged in');
-
-      const distNum = routeInfo ? parseFloat(routeInfo.distance) : 0;
+      if (!user) throw new Error('User not logged in');
 
       await api.postLoad({
-        origin: formData.origin,
-        destination: formData.destination,
-        weight: Number(formData.weight),
-        price: Number(formData.price),
-        description: formData.description,
-        truck_type_required: formData.truckType,
-        distance: distNum, 
-        estimatedTime: routeInfo?.duration || ''
+        ...shipmentData,
+        weight: Number(shipmentData.weight),
+        price: Number(shipmentData.price),
+        products,
+        receiver,
+        truck_type_required: shipmentData.truck_type as any
       }, user.id);
 
       toast.success(t('post_success'));
       navigate('/shipper');
-    } catch (e) { toast.error(t('error_generic')); }
-    setLoading(false);
+    } catch (e) {
+      console.error(e);
+      toast.error(t('error_generic'));
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      <div className="page-header flex gap-4 items-center">
-        <button onClick={() => navigate('/shipper')} className="icon-btn w-10 h-10">
-          <ArrowLeft className="w-5 h-5 text-foreground" />
-        </button>
-        <h1 className="text-xl font-bold text-foreground">{t('post_new_load')}</h1>
+      {/* Header */}
+      <div className="bg-primary p-4 text-primary-foreground flex items-center gap-4 shadow-md">
+        <button onClick={() => navigate('/shipper')}><ArrowLeft /></button>
+        <h1 className="text-xl font-bold">{t('add_new_shipment')}</h1>
       </div>
 
-      <div className="p-4 space-y-4">
-        <div className="brand-card p-4 space-y-5">
-          <h3 className="font-bold mb-2 flex items-center gap-2 text-foreground">
-            <Route className="w-5 h-5 text-primary"/>
-            {t('route_details')}
-          </h3>
-          
-          <div>
-            <label className="text-sm font-medium text-foreground block mb-2">{t('pickup_point')}</label>
-            <SmartLocationSelect 
-              placeholder={t('choose_city')}
-              iconColor="text-primary"
-              onSelect={(label, lat, lng) => {
-                setFormData(prev => ({ ...prev, origin: label, originLat: lat, originLng: lng }));
-              }}
-            />
-          </div>
-          
-          <div>
-            <label className="text-sm font-medium text-foreground block mb-2">{t('dropoff_point')}</label>
-            <SmartLocationSelect 
-              placeholder={t('choose_city')}
-              iconColor="text-secondary"
-              onSelect={(label, lat, lng) => {
-                setFormData(prev => ({ ...prev, destination: label, destLat: lat, destLng: lng }));
-              }}
-            />
-          </div>
+      {/* Wizard Steps Indicator */}
+      <div className="flex justify-center gap-2 p-4 bg-muted/30">
+        {[1, 2, 3].map((s) => (
+          <div key={s} className={`h-2 w-1/3 rounded-full transition-all ${s <= step ? 'bg-primary' : 'bg-gray-300'}`} />
+        ))}
+      </div>
 
-          {(routeInfo || calculating) && (
-            <div className="bg-muted/30 border border-primary/20 p-4 rounded-xl flex items-center justify-between animate-fade-in">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm border border-border">
-                  {calculating ? <Loader2 className="w-5 h-5 animate-spin text-primary"/> : <Route className="w-5 h-5 text-primary" />}
+      <div className="p-4 max-w-2xl mx-auto space-y-6">
+        
+        {/* الخطوة 1: تفاصيل الشحنة */}
+        {step === 1 && (
+          <div className="space-y-4 animate-fade-in">
+            <div className="brand-card p-4">
+              <h3 className="font-bold mb-4 flex items-center gap-2 text-primary">
+                <Package className="w-5 h-5" /> {t('shipment_type')}
+              </h3>
+              
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                  <Label>{t('shipment_type')}</Label>
+                  <Select onValueChange={(v) => setShipmentData({...shipmentData, type: v})}>
+                    <SelectTrigger><SelectValue placeholder="اختر" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="general">{t('general_goods')}</SelectItem>
+                      <SelectItem value="food">{t('food_stuff')}</SelectItem>
+                      <SelectItem value="building">{t('building_materials')}</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">{t('estimated_distance')}</p>
-                  <p className="font-bold text-foreground text-lg dir-ltr">
-                    {calculating ? '...' : routeInfo?.distance}
-                  </p>
+                  <Label>{t('package_type')}</Label>
+                  <Select onValueChange={(v) => setShipmentData({...shipmentData, package_type: v})}>
+                    <SelectTrigger><SelectValue placeholder="اختر" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="carton">{t('carton')}</SelectItem>
+                      <SelectItem value="sack">{t('sack')}</SelectItem>
+                      <SelectItem value="pallet">{t('pallet')}</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
-              <div className="text-left border-r border-border/50 pr-4 pl-2">
-                <p className="text-xs text-muted-foreground">{t('time_label')}</p>
-                <p className="font-bold text-secondary text-sm">
-                  {calculating ? '...' : routeInfo?.duration}
-                </p>
+
+              <div className="space-y-4">
+                <div>
+                  <Label>{t('pickup_location')}</Label>
+                  <SmartLocationSelect onSelect={(l, lat, lng) => setShipmentData({...shipmentData, origin: l, originLat: lat, originLng: lng})} />
+                </div>
+                <div>
+                  <Label>{t('delivery_location')}</Label>
+                  <SmartLocationSelect iconColor="text-secondary" onSelect={(l, lat, lng) => setShipmentData({...shipmentData, destination: l, destLat: lat, destLng: lng})} />
+                </div>
+                <div>
+                  <Label>{t('req_date')}</Label>
+                  <div className="relative">
+                    <Calendar className="absolute right-3 top-3 w-4 h-4 text-muted-foreground" />
+                    <Input type="date" className="pr-10" onChange={(e) => setShipmentData({...shipmentData, date: e.target.value})} />
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                    <div>
+                        <Label>{t('price_label')}</Label>
+                        <Input type="number" placeholder="SAR" onChange={(e) => setShipmentData({...shipmentData, price: e.target.value})} />
+                    </div>
+                    <div>
+                        <Label>{t('weight_label')}</Label>
+                        <Input type="number" placeholder="KG" onChange={(e) => setShipmentData({...shipmentData, weight: e.target.value})} />
+                    </div>
+                </div>
               </div>
             </div>
-          )}
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div className="brand-card p-4">
-            <label className="text-sm font-medium text-foreground block mb-2 flex items-center gap-1">
-              <Weight className="w-4 h-4 text-muted-foreground"/>{t('weight_label')} ({t('kg')})
-            </label>
-            <input 
-              type="number" 
-              className="input-field w-full" 
-              value={formData.weight} 
-              onChange={e => setFormData({...formData, weight: e.target.value})} 
-              placeholder="5000" 
-            />
+            
+            <Button className="w-full h-12 text-lg" onClick={() => setStep(2)}>{t('next')}</Button>
           </div>
-          <div className="brand-card p-4">
-            <label className="text-sm font-medium text-foreground block mb-2 flex items-center gap-1">
-              <DollarSign className="w-4 h-4 text-muted-foreground"/>{t('price_label')} ({t('sar')})
-            </label>
-            <input 
-              type="number" 
-              className="input-field w-full" 
-              value={formData.price} 
-              onChange={e => setFormData({...formData, price: e.target.value})} 
-              placeholder="1200" 
-            />
+        )}
+
+        {/* الخطوة 2: إضافة المنتجات */}
+        {step === 2 && (
+          <div className="space-y-4 animate-fade-in">
+            <div className="brand-card p-4">
+              <h3 className="font-bold mb-4 flex items-center gap-2 text-primary">
+                <Plus className="w-5 h-5" /> {t('add_products')}
+              </h3>
+
+              <div className="grid gap-3 mb-4 p-3 bg-muted/20 rounded-xl border border-dashed border-primary/30">
+                <Input placeholder={t('product_name')} value={currentProduct.name || ''} onChange={e => setCurrentProduct({...currentProduct, name: e.target.value})} />
+                <Input placeholder={t('product_desc')} value={currentProduct.description || ''} onChange={e => setCurrentProduct({...currentProduct, description: e.target.value})} />
+                <div className="grid grid-cols-2 gap-2">
+                  <Input type="number" placeholder="الكمية" value={currentProduct.quantity || ''} onChange={e => setCurrentProduct({...currentProduct, quantity: Number(e.target.value)})} />
+                  <Input placeholder={t('unit')} value={currentProduct.unit || ''} onChange={e => setCurrentProduct({...currentProduct, unit: e.target.value})} />
+                </div>
+                <Button size="sm" variant="secondary" onClick={handleAddProduct}><Plus className="w-4 h-4 ml-2"/> {t('add_product_btn')}</Button>
+              </div>
+
+              <div className="space-y-2">
+                {products.map((prod) => (
+                  <div key={prod.id} className="flex justify-between items-center p-3 bg-card border rounded-lg shadow-sm">
+                    <div>
+                      <p className="font-bold">{prod.name}</p>
+                      <p className="text-xs text-muted-foreground">{prod.quantity} {prod.unit}</p>
+                    </div>
+                    <button onClick={() => handleRemoveProduct(prod.id)} className="text-red-500 p-2"><Trash2 className="w-4 h-4"/></button>
+                  </div>
+                ))}
+                {products.length === 0 && <p className="text-center text-muted-foreground text-sm py-4">لم يتم إضافة منتجات</p>}
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <Button variant="outline" className="flex-1" onClick={() => setStep(1)}>{t('previous')}</Button>
+              <Button className="flex-1" onClick={() => setStep(3)}>{t('next')}</Button>
+            </div>
           </div>
-        </div>
+        )}
 
-        <div className="brand-card p-4">
-          <label className="text-sm font-medium text-foreground block mb-3">{t('truck_type_optional')}</label>
-          <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
-            {truckTypes.map(tType => (
-              <button 
-                key={tType.id} 
-                onClick={() => setFormData({...formData, truckType: tType.id})} 
-                className={`px-4 py-2 rounded-xl border whitespace-nowrap transition-all flex items-center gap-2 ${
-                  formData.truckType === tType.id 
-                    ? 'bg-primary text-white border-primary shadow-md' 
-                    : 'bg-background hover:bg-muted border-input'
-                }`}
-              >
-                <span>{tType.icon}</span>
-                {t(tType.id as any) || tType.nameAr}
-              </button>
-            ))}
+        {/* الخطوة 3: المستلم والحفظ */}
+        {step === 3 && (
+          <div className="space-y-4 animate-fade-in">
+            <div className="brand-card p-4">
+              <h3 className="font-bold mb-4 flex items-center gap-2 text-primary">
+                <User className="w-5 h-5" /> {t('receiver_info')}
+              </h3>
+              
+              <div className="space-y-3">
+                <Input placeholder={t('receiver_name')} value={receiver.name} onChange={e => setReceiver({...receiver, name: e.target.value})} />
+                <Input placeholder={t('receiver_phone')} type="tel" value={receiver.phone} onChange={e => setReceiver({...receiver, phone: e.target.value})} />
+                <Input placeholder={t('receiver_address')} value={receiver.address} onChange={e => setReceiver({...receiver, address: e.target.value})} />
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-4">
+              <Button variant="outline" className="flex-1" onClick={() => setStep(2)}>{t('previous')}</Button>
+              <Button className="flex-[2]" onClick={handleSubmit} disabled={loading}>
+                {loading ? t('loading') : t('send_shipment')}
+              </Button>
+            </div>
           </div>
-        </div>
-
-        <div className="brand-card p-4">
-          <label className="text-sm font-medium text-foreground block mb-2">{t('additional_details')}</label>
-          <textarea 
-            className="input-field w-full h-24 resize-none pt-2" 
-            value={formData.description} 
-            onChange={e => setFormData({...formData, description: e.target.value})} 
-            placeholder={t('desc_placeholder')} 
-          />
-        </div>
-      </div>
-
-      <div className="sticky-bottom max-w-[480px] mx-auto bg-background/80 backdrop-blur-md border-t p-4">
-        <button 
-          onClick={handleSubmit} 
-          disabled={loading || !formData.origin || !formData.price || !formData.destination} 
-          className="btn-primary w-full h-12 text-lg shadow-lg shadow-primary/20 disabled:opacity-50 disabled:shadow-none flex items-center justify-center gap-2"
-        >
-          {loading ? <Loader2 className="animate-spin"/> : t('post_now_btn')}
-        </button>
+        )}
       </div>
     </div>
   );
